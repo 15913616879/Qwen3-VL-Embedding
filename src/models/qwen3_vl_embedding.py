@@ -21,15 +21,25 @@ from qwen_vl_utils.vision_process import process_vision_info
 logger = logging.getLogger(__name__)
 
 # Constants for configuration
+# 最大序列长度
 MAX_LENGTH = 8192
+# 图像基础因子
 IMAGE_BASE_FACTOR = 16
+# 图像因子（基础因子的2倍）
 IMAGE_FACTOR = IMAGE_BASE_FACTOR * 2
+# 最小像素数
 MIN_PIXELS = 4 * IMAGE_FACTOR * IMAGE_FACTOR
-MAX_PIXELS = 1800 * IMAGE_FACTOR * IMAGE_FACTOR
+# 最大像素数
+MAX_PIXELS = 1280 * IMAGE_FACTOR * IMAGE_FACTOR
+# 视频帧率
 FPS = 1
-MAX_FRAMES = 64
-FRAME_MAX_PIXELS = 768 * IMAGE_FACTOR * IMAGE_FACTOR
-MAX_TOTAL_PIXELS = 10 * FRAME_MAX_PIXELS
+# 最大帧数
+MAX_FRAMES = 8
+# 单帧最大像素数
+FRAME_MAX_PIXELS = 512 * IMAGE_FACTOR * IMAGE_FACTOR
+# 总最大像素数
+MAX_TOTAL_PIXELS = 6 * FRAME_MAX_PIXELS
+# 填充标记
 PAD_TOKEN = "<|endoftext|>"
 
 # Define output structure for embeddings
@@ -286,7 +296,14 @@ class Qwen3VLEmbedder():
                 ]
             elif isinstance(vid, str):
                 # Video as file path
-                video_content = vid if vid.startswith(('http://', 'https://')) else 'file://' + vid
+                # On Windows, don't add file:// prefix as torchvision.io.read_video
+                # returns empty metadata when file:// is used
+                if vid.startswith(('http://', 'https://')):
+                    video_content = vid
+                elif os.name == 'nt':  # Windows
+                    video_content = vid
+                else:
+                    video_content = 'file://' + vid
                 video_kwargs = {'fps': fps or self.fps, 'max_frames': max_frames or self.max_frames}
             else:
                 raise TypeError(f"Unrecognized video type: {type(vid)}")
